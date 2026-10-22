@@ -22,7 +22,7 @@ WORKDIR /app
 RUN groupadd -r cobug && useradd -r -g cobug cobug
 
 COPY --from=builder /build/target/cobug-api-0.0.1-SNAPSHOT.jar app.jar
-RUN chown -R cobug:cobug /app
+RUN mkdir -p /app/storage/main /app/storage/workspace /app/storage/project-files /app/storage/source-artifacts && chown -R cobug:cobug /app
 
 USER cobug
 

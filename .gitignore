@@ -33,7 +33,9 @@ build/
 .vscode/
 
 ### COBUG local project storage ###
-storage/
+/storage/*
+!/storage/**/.gitkeep
+!src/main/java/com/cobug/storage/**
 
 ### Environment & Secrets ###
 .env
