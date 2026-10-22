@@ -26,8 +26,8 @@ public class RazorpayPaymentService {
     private final String keyId;
     private final String keySecret;
     private final String webhookSecret;
-    private final long amountPaise;
-    private final long activationCredits;
+    private final long plusAmountPaise;
+    private final long proAmountPaise;
 
     public RazorpayPaymentService(
             UserRepository users,
@@ -36,20 +36,20 @@ public class RazorpayPaymentService {
             @Value("${cobug.razorpay.key-id:}") String keyId,
             @Value("${cobug.razorpay.key-secret:}") String keySecret,
             @Value("${cobug.razorpay.webhook-secret:}") String webhookSecret,
-            @Value("${cobug.razorpay.amount-paise:2000}") long amountPaise,
-            @Value("${cobug.ai.activation-credits:1000}") long activationCredits) {
+            @Value("${cobug.razorpay.plus-amount-paise:9900}") long plusAmountPaise,
+            @Value("${cobug.razorpay.pro-amount-paise:19900}") long proAmountPaise) {
         this.users = users;
         this.transactions = transactions;
         this.aiSettings = aiSettings;
         this.keyId = keyId == null ? "" : keyId.trim();
         this.keySecret = keySecret == null ? "" : keySecret.trim();
         this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
-        this.amountPaise = amountPaise;
-        this.activationCredits = activationCredits;
+        this.plusAmountPaise = plusAmountPaise;
+        this.proAmountPaise = proAmountPaise;
     }
 
     public Config config() {
-        return new Config(!keyId.isBlank() && !keySecret.isBlank(), keyId, amountPaise, "INR", activationCredits);
+        return new Config(!keyId.isBlank() && !keySecret.isBlank(), keyId, plusAmountPaise, plusAmountPaise, proAmountPaise, "INR");
     }
 
     @Transactional
@@ -62,8 +62,9 @@ public class RazorpayPaymentService {
         requireConfigured();
         User user = findUser(email);
         String selectedPlan = plan == null || plan.isBlank() ? "plus" : plan.toLowerCase().trim();
-        long targetAmount = "pro".equals(selectedPlan) ? 19900L : 9900L;
-        String purpose = "pro".equals(selectedPlan) ? "COBUG_PRO_PLAN" : "COBUG_PLUS_PLAN";
+        boolean isPro = "pro".equals(selectedPlan);
+        long targetAmount = isPro ? proAmountPaise : plusAmountPaise;
+        String purpose = isPro ? "COBUG_PRO_PLAN" : "COBUG_PLUS_PLAN";
         try {
             RazorpayClient client = new RazorpayClient(keyId, keySecret);
             String receipt = "COBUG-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
@@ -85,7 +86,7 @@ public class RazorpayPaymentService {
             tx.setCurrency("INR");
             tx.setStatus(RazorpayPaymentTransaction.Status.CREATED);
             transactions.save(tx);
-            return new OrderResponse(order.get("id"), targetAmount, "INR", keyId, activationCredits, selectedPlan);
+            return new OrderResponse(order.get("id"), targetAmount, "INR", keyId, selectedPlan);
         } catch (RazorpayException e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Unable to create Razorpay order: " + e.getMessage(), e);
         }
@@ -101,7 +102,8 @@ public class RazorpayPaymentService {
         RazorpayPaymentTransaction tx = transactions.findByRazorpayOrderId(request.orderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Razorpay order not found."));
         if (!tx.getUser().getId().equals(user.getId())) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment order does not belong to this account.");
-        if (tx.getStatus() == RazorpayPaymentTransaction.Status.PAID) return new VerifyResponse(true, "Payment already verified.", activationCredits);
+        String plan = tx.getAmount() >= proAmountPaise || (tx.getPurpose() != null && tx.getPurpose().contains("PRO")) ? "pro" : "plus";
+        if (tx.getStatus() == RazorpayPaymentTransaction.Status.PAID) return new VerifyResponse(true, "Payment already verified.", plan);
         if (tx.getAmount() <= 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid payment transaction amount.");
 
         try {
@@ -125,7 +127,7 @@ public class RazorpayPaymentService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Razorpay payment is not captured for this order yet or amount mismatched.");
             }
             settle(tx, request.paymentId());
-            return new VerifyResponse(true, "Payment verified and plan activated.", activationCredits);
+            return new VerifyResponse(true, "Payment verified and " + plan.toUpperCase() + " plan activated.", plan);
         } catch (RazorpayException e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Unable to verify payment with Razorpay: " + e.getMessage(), e);
         }
@@ -160,8 +162,8 @@ public class RazorpayPaymentService {
         tx.setPaidAt(LocalDateTime.now());
         tx.setFailureReason(null);
         transactions.save(tx);
-        String plan = tx.getAmount() >= 19900L || (tx.getPurpose() != null && tx.getPurpose().contains("PRO")) ? "pro" : "plus";
-        aiSettings.activatePlanFromPayment(tx.getUser().getEmail(), plan, activationCredits, "COBUG " + plan.toUpperCase() + " Plan activation");
+        String plan = tx.getAmount() >= proAmountPaise || (tx.getPurpose() != null && tx.getPurpose().contains("PRO")) ? "pro" : "plus";
+        aiSettings.activatePlanFromPayment(tx.getUser().getEmail(), plan, "COBUG " + plan.toUpperCase() + " Plan activation");
     }
 
     private User findUser(String email) {
@@ -173,8 +175,8 @@ public class RazorpayPaymentService {
         if (keyId.isBlank() || keySecret.isBlank()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET before starting COBUG.");
     }
 
-    public record Config(boolean configured, String keyId, long amount, String currency, long activationCredits) {}
-    public record OrderResponse(String orderId, long amount, String currency, String keyId, long activationCredits, String plan) {}
+    public record Config(boolean configured, String keyId, long amount, long plusAmount, long proAmount, String currency) {}
+    public record OrderResponse(String orderId, long amount, String currency, String keyId, String plan) {}
     public record VerifyRequest(String orderId, String paymentId, String signature) {}
-    public record VerifyResponse(boolean success, String message, long activationCredits) {}
+    public record VerifyResponse(boolean success, String message, String plan) {}
 }

@@ -106,32 +106,22 @@ public class AiProviderRouter implements AiProvider {
     }
 
     private void ensureCloud(AiSettings s) {
-        if (("ollama-cloud".equals(normalize(s.getProvider())) || "gemini".equals(normalize(s.getProvider())))
-                && (!s.isCloudEnabled() || s.getCredits() <= 0)) {
-            if (!s.isCloudEnabled()) {
-                throw new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.PAYMENT_REQUIRED,
-                        "Cloud AI is not activated. Open Settings → AI Integration.");
-            }
+        String plan = s == null || s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
+        if ("go".equals(plan)) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.PAYMENT_REQUIRED,
-                    "Your COBUG Cloud AI credits are exhausted.");
+                    "Cloud and custom AI models require COBUG Plus (₹99/month) or Pro (₹199/month). Open Settings → AI Integration.");
         }
     }
 
     private String run(String email, AiSettings s, java.util.function.Function<AiProvider,String> action) {
         String plan = s == null || s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
         if ("go".equals(plan)) {
-            return "You are on the COBUG Go plan. You need to upgrade to Plus to talk to dynamic AI.";
+            return "You are on the COBUG Go plan. Upgrade to Plus (₹99/month) or Pro (₹199/month) in Settings → AI Integration to chat with dynamic AI models.";
         }
-        String provider = normalize(s.getProvider());
         ensureCloud(s);
         AiProvider selected = active(email, s);
-        String response = action.apply(selected);
-        if ("ollama-cloud".equals(provider) || "gemini".equals(provider)) {
-            settingsService.consumeCloudCredit(email);
-        }
-        return response;
+        return action.apply(selected);
     }
 
     @Override

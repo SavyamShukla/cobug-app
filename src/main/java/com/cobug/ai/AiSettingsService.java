@@ -150,54 +150,27 @@ public class AiSettingsService {
     }
 
     public AiSettings activateCloud(String email) {
-        if (!testActivationEnabled) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                    "Cloud activation requires the COBUG payment flow. Test activation is disabled.");
-        }
-        AiSettings s = getOrCreate(email);
-        s.setCloudEnabled(true);
-        s.setPlan("plus");
-        long previousCredits = s.getCredits();
-        long newCredits = Math.max(previousCredits, activationCredits);
-        s.setCredits(newCredits);
-        if (!"ollama-cloud".equals(s.getProvider()) && !"gemini".equals(s.getProvider())) {
-            s.setProvider("ollama-cloud");
-            s.setModel(defaultCloudModel);
-        } else if ("ollama-cloud".equals(s.getProvider())
-                && (s.getModel() == null || s.getModel().isBlank() || s.getModel().startsWith("qwen2.5-coder"))) {
-            s.setModel(defaultCloudModel);
-        } else if ("gemini".equals(s.getProvider())
-                && (s.getModel() == null || s.getModel().isBlank())) {
-            s.setModel(defaultGeminiModel);
-        }
-        AiSettings saved = repository.save(s);
-        if (newCredits > previousCredits) {
-            transactions.save(new AiCreditTransaction(saved.getUser(), newCredits - previousCredits,
-                    newCredits, "ACTIVATION", "COBUG Cloud AI activation (development test mode)"));
-        }
-        return saved;
+        return activatePlan(email, "plus");
     }
 
-    public AiSettings activatePlanFromPayment(String email, String plan, long credits, String description) {
+    public AiSettings activatePlanFromPayment(String email, String plan, String description) {
         AiSettings s = getOrCreate(email);
         String p = plan == null || plan.isBlank() ? "plus" : plan.toLowerCase().trim();
         s.setPlan(p);
         s.setCloudEnabled(true);
-        long grant = Math.max(0, credits);
-        long newCredits = s.getCredits() + grant;
-        s.setCredits(newCredits);
-        if (!"ollama-cloud".equals(normalizeProvider(s.getProvider())) && !"gemini".equals(normalizeProvider(s.getProvider()))) {
-            s.setProvider("ollama-cloud");
-            s.setModel(defaultCloudModel);
+        if ("local-engine".equals(s.getProvider())) {
+            s.setProvider("gemini");
+            if (s.getModel() == null || s.getModel().isBlank()) s.setModel(defaultGeminiModel);
         }
-        AiSettings saved = repository.save(s);
-        transactions.save(new AiCreditTransaction(saved.getUser(), grant, newCredits, "PAYMENT",
-                description == null || description.isBlank() ? "COBUG " + p.toUpperCase() + " Plan activation" : description));
-        return saved;
+        return repository.save(s);
+    }
+
+    public AiSettings activatePlanFromPayment(String email, String plan, long credits, String description) {
+        return activatePlanFromPayment(email, plan, description);
     }
 
     public AiSettings activateCloudFromPayment(String email, long credits, String description) {
-        return activatePlanFromPayment(email, "plus", credits, description);
+        return activatePlanFromPayment(email, "plus", description);
     }
 
     public AiSettings prepareRequest(String email) {
@@ -205,18 +178,7 @@ public class AiSettingsService {
     }
 
     public void consumeCloudCredit(String email) {
-        AiSettings s = getOrCreate(email);
-        if (!s.isCloudEnabled()) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Cloud AI is not activated. Open Settings → AI Integration.");
-        }
-        if (s.getCredits() <= 0) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Your COBUG Cloud AI credits are exhausted.");
-        }
-        s.setCredits(s.getCredits() - 1);
-        AiSettings saved = repository.save(s);
-        transactions.save(new AiCreditTransaction(saved.getUser(), -1, saved.getCredits(),
-                "USAGE", "COBUG Cloud AI request"));
-
+        // Plans provide unlimited access for Plus and Pro subscribers. Credit deduction is not used.
     }
 
     private User user(String email) {
