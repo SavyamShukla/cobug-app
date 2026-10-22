@@ -29,4 +29,6 @@ services:
       - key: COBUG_FRONTEND_URL
         value: http://127.0.0.1:43127
       - key: COBUG_PUBLIC_API_URL
-        sync: false
+        value: https://cobug-app.onrender.com
+      - key: GOOGLE_REDIRECT_URI
+        value: https://cobug-app.onrender.com/api/auth/google/callback

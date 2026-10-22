@@ -7,6 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 @Service
@@ -19,8 +22,21 @@ public class JwtService {
             @Value("${cobug.jwt.secret}") String secret,
             @Value("${cobug.jwt.expiration}") long expiration
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+        this.secretKey = buildKey(secret);
         this.expiration = expiration;
+    }
+
+    private static SecretKey buildKey(String secret) {
+        byte[] bytes = (secret == null ? "" : secret).getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 32) {
+            try {
+                MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+                bytes = sha256.digest(bytes);
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException("SHA-256 digest unavailable", e);
+            }
+        }
+        return Keys.hmacShaKeyFor(bytes);
     }
 
     public String generateToken(String email) {

@@ -37,12 +37,11 @@ public class GoogleOAuthService {
     private static final Duration STATE_LIFETIME = Duration.ofMinutes(10);
     private static final String GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
-    private static final String REDIRECT_URI = "http://127.0.0.1:8080/api/auth/google/callback";
-
     private final ObjectMapper mapper;
     private final AuthService authService;
     private final String clientId;
     private final String clientSecret;
+    private final String redirectUri;
     private final HttpClient httpClient;
     private final Map<String, PendingState> states = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
@@ -51,12 +50,22 @@ public class GoogleOAuthService {
             ObjectMapper mapper,
             AuthService authService,
             @Value("${cobug.google.client-id:}") String clientId,
-            @Value("${cobug.google.client-secret:}") String clientSecret) {
+            @Value("${cobug.google.client-secret:}") String clientSecret,
+            @Value("${cobug.google.redirect-uri:}") String configuredRedirectUri,
+            @Value("${cobug.public.api.url:https://cobug-app.onrender.com}") String publicApiUrl) {
         this.mapper = mapper;
         this.authService = authService;
         this.clientId = clientId == null ? "" : clientId.trim();
         this.clientSecret = clientSecret == null ? "" : clientSecret.trim();
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+
+        if (configuredRedirectUri != null && !configuredRedirectUri.isBlank()) {
+            this.redirectUri = configuredRedirectUri.trim();
+        } else {
+            String base = (publicApiUrl == null || publicApiUrl.isBlank()) ? "https://cobug-app.onrender.com" : publicApiUrl.trim();
+            this.redirectUri = base.replaceAll("/+$", "") + "/api/auth/google/callback";
+        }
+        log.info("[AUTH][GOOGLE] Configured Google redirect URI: {}", this.redirectUri);
     }
 
     public String start(String returnOrigin) {
@@ -69,11 +78,11 @@ public class GoogleOAuthService {
         String challenge = codeChallenge(verifier);
         String origin = normalizeOrigin(returnOrigin);
         states.put(state, new PendingState(origin, verifier, Instant.now().plus(STATE_LIFETIME)));
-        log.info("[AUTH][GOOGLE] OAuth state created statePrefix={} origin={} redirectUri={} expiresInSeconds={}", state.substring(0, Math.min(8, state.length())), origin, REDIRECT_URI, STATE_LIFETIME.toSeconds());
+        log.info("[AUTH][GOOGLE] OAuth state created statePrefix={} origin={} redirectUri={} expiresInSeconds={}", state.substring(0, Math.min(8, state.length())), origin, redirectUri, STATE_LIFETIME.toSeconds());
 
         return GOOGLE_AUTH
                 + "?client_id=" + enc(clientId)
-                + "&redirect_uri=" + enc(REDIRECT_URI)
+                + "&redirect_uri=" + enc(redirectUri)
                 + "&response_type=code"
                 + "&scope=" + enc("openid email profile")
                 + "&state=" + enc(state)
@@ -103,7 +112,7 @@ public class GoogleOAuthService {
                     .append("code=").append(enc(code))
                     .append("&client_id=").append(enc(clientId))
                     .append("&code_verifier=").append(enc(pending.verifier()))
-                    .append("&redirect_uri=").append(enc(REDIRECT_URI))
+                    .append("&redirect_uri=").append(enc(redirectUri))
                     .append("&grant_type=authorization_code");
             // Desktop OAuth clients cannot keep secrets confidential. Google allows
             // the token exchange without client_secret; PKCE protects the code.
@@ -206,11 +215,17 @@ public class GoogleOAuthService {
                     + java.net.URLEncoder.encode(token, StandardCharsets.UTF_8);
             String callbackJson = new ObjectMapper().writeValueAsString(callbackUrl);
             return "<!doctype html><html><head><meta charset='utf-8'><title>COBUG</title>"
-                    + "<style>body{font-family:system-ui;background:#080a10;color:#fff;display:grid;place-items:center;height:100vh;margin:0}"
-                    + ".box{padding:28px 32px;border:1px solid #273044;border-radius:18px;background:#111521;text-align:center}"
-                    + "p{color:#9ca8bb}</style></head><body><div class='box'><b>Signed in successfully</b>"
-                    + "<p>Returning to COBUG…</p></div>"
-                    + "<script>const callback=" + callbackJson + ";window.location.replace(callback);</script>"
+                    + "<style>body{font-family:system-ui,-apple-system,sans-serif;background:#080a10;color:#fff;display:grid;place-items:center;height:100vh;margin:0}"
+                    + ".box{padding:32px 36px;border:1px solid #273044;border-radius:18px;background:#111521;text-align:center;max-width:380px}"
+                    + "h2{margin:0 0 8px 0;font-size:20px;font-weight:600}"
+                    + "p{color:#9ca8bb;font-size:14px;margin:8px 0 20px 0}"
+                    + ".btn{display:inline-block;padding:10px 24px;border-radius:10px;background:#3b82f6;color:#fff;text-decoration:none;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(59,130,246,0.35);transition:background .2s}"
+                    + ".btn:hover{background:#2563eb}</style></head><body>"
+                    + "<div class='box'><h2>Signed in successfully</h2>"
+                    + "<p>Returning to COBUG desktop application…</p>"
+                    + "<a class='btn' href='" + callbackUrl + "'>Open COBUG</a>"
+                    + "</div>"
+                    + "<script>const callback=" + callbackJson + ";setTimeout(()=>{window.location.href=callback;},100);</script>"
                     + "</body></html>";
         }
 
