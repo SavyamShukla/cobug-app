@@ -1,0 +1,6 @@
+target/
+.mvn/
+*.log
+.DS_Store
+.idea/
+.vscode/

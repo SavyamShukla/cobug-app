@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: cobug-api
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    autoDeploy: true
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: COBUG_JWT_SECRET
+        generateValue: true
+      - key: COBUG_STORAGE_TYPE
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: cobug-storage
+      - key: COBUG_AI_PROVIDER
+        value: ollama
+      - key: COBUG_FRONTEND_URL
+        value: http://127.0.0.1:43127
+      - key: COBUG_PUBLIC_API_URL
+        sync: false
