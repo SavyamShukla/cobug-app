@@ -52,6 +52,14 @@ public class SecurityConfig {
                         )
                 )
 
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Please log in to continue.\"}");
+                        })
+                )
+
                 .authorizeHttpRequests(auth ->
                         auth
 

@@ -41,11 +41,16 @@ public class RazorpayPaymentService {
         this.users = users;
         this.transactions = transactions;
         this.aiSettings = aiSettings;
-        this.keyId = keyId == null ? "" : keyId.trim();
-        this.keySecret = keySecret == null ? "" : keySecret.trim();
-        this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
+        this.keyId = cleanKey(keyId);
+        this.keySecret = cleanKey(keySecret);
+        this.webhookSecret = cleanKey(webhookSecret);
         this.plusAmountPaise = plusAmountPaise;
         this.proAmountPaise = proAmountPaise;
+    }
+
+    private static String cleanKey(String value) {
+        if (value == null) return "";
+        return value.trim().replaceAll("^[\"']+", "").replaceAll("[\"']+$", "").trim();
     }
 
     public Config config() {
