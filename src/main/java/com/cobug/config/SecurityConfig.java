@@ -65,13 +65,14 @@ public class SecurityConfig {
 
                                 .requestMatchers(
                                         "/api/health",
+                                        "/api/auth/register/**",
                                         "/api/auth/register",
                                         "/api/auth/login",
+                                        "/api/auth/forgot-password/**",
                                         "/api/auth/forgot-password",
                                         "/api/auth/reset-password",
+                                        "/api/auth/google/**",
                                         "/api/auth/google",
-                                        "/api/auth/google/start",
-                                        "/api/auth/google/callback",
                                         "/api/auth/resend-verification",
                                         "/api/auth/verify-email",
                                         "/ws/chat",
