@@ -64,7 +64,12 @@ public class SecurityConfig {
                         auth
 
                                 .requestMatchers(
+                                        "/",
+                                        "/health",
+                                        "/ping",
                                         "/api/health",
+                                        "/api/ping",
+                                        "/error",
                                         "/api/auth/register/**",
                                         "/api/auth/register",
                                         "/api/auth/login",
