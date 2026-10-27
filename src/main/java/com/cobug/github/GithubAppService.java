@@ -184,9 +184,21 @@ public class GithubAppService {
 
     public Map<String,Object> status(String email) {
         User user=users.findByEmail(email).orElseThrow(()->bad("User not found."));
-        return connections.findByUserId(user.getId()).map(c -> Map.<String,Object>of(
-                "connected", true, "githubLogin", c.getGithubLogin(), "connectedAt", c.getConnectedAt()
-        )).orElseGet(() -> Map.of("connected",false));
+        boolean configured = isConfigured();
+        List<String> missing = getMissingConfig();
+        Map<String, Object> result = new LinkedHashMap<>();
+        connections.findByUserId(user.getId()).ifPresentOrElse(c -> {
+            result.put("connected", true);
+            result.put("githubLogin", c.getGithubLogin());
+            result.put("connectedAt", c.getConnectedAt());
+        }, () -> {
+            result.put("connected", false);
+        });
+        result.put("configured", configured);
+        if (!configured) {
+            result.put("missingConfig", missing);
+        }
+        return result;
     }
 
     /**
@@ -288,12 +300,52 @@ public class GithubAppService {
      * Accepts the .pem exactly as GitHub gives it (PKCS#1, "BEGIN RSA PRIVATE KEY") and also PKCS#8
      * ("BEGIN PRIVATE KEY"), so no openssl conversion is needed.
      */
+    public String resolvePrivateKeyPem() {
+        if (privateKeyPem != null && !privateKeyPem.isBlank()) {
+            String candidate = privateKeyPem.trim();
+            try {
+                java.nio.file.Path p = java.nio.file.Paths.get(candidate);
+                if (java.nio.file.Files.exists(p) && !java.nio.file.Files.isDirectory(p)) {
+                    return java.nio.file.Files.readString(p);
+                }
+            } catch (Exception ignored) {}
+            return privateKeyPem;
+        }
+        for (String path : List.of("/etc/secrets/github-app.pem", "/etc/secrets/github-private-key.pem", "/etc/secrets/github.pem")) {
+            try {
+                java.nio.file.Path p = java.nio.file.Paths.get(path);
+                if (java.nio.file.Files.exists(p) && !java.nio.file.Files.isDirectory(p)) {
+                    log.info("Loaded GitHub App private key from Render secret file: {}", path);
+                    return java.nio.file.Files.readString(p);
+                }
+            } catch (Exception ignored) {}
+        }
+        return "";
+    }
+
+    public List<String> getMissingConfig() {
+        List<String> missing = new ArrayList<>();
+        if (appId == null || appId.isBlank()) missing.add("GITHUB_APP_ID");
+        if (clientId == null || clientId.isBlank()) missing.add("GITHUB_APP_CLIENT_ID");
+        if (clientSecret == null || clientSecret.isBlank()) missing.add("GITHUB_APP_CLIENT_SECRET");
+        if (resolvePrivateKeyPem().isBlank()) missing.add("GITHUB_APP_PRIVATE_KEY");
+        return missing;
+    }
+
+    public boolean isConfigured() {
+        return getMissingConfig().isEmpty();
+    }
+
     private PrivateKey privateKey() throws Exception {
-        String raw=privateKeyPem.replace("\\n","\n").trim();
-        boolean pkcs1=raw.contains("BEGIN RSA PRIVATE KEY");
-        String pem=raw.replaceAll("-----BEGIN [A-Z ]*PRIVATE KEY-----","").replaceAll("-----END [A-Z ]*PRIVATE KEY-----","").replaceAll("\\s","");
-        byte[] der=Base64.getDecoder().decode(pem);
-        if(pkcs1) der=pkcs1ToPkcs8(der);
+        String keyContent = resolvePrivateKeyPem();
+        if (keyContent.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "GITHUB_APP_PRIVATE_KEY is missing or empty.");
+        }
+        String raw = keyContent.replace("\\n", "\n").trim();
+        boolean pkcs1 = raw.contains("BEGIN RSA PRIVATE KEY");
+        String pem = raw.replaceAll("-----BEGIN [A-Z ]*PRIVATE KEY-----", "").replaceAll("-----END [A-Z ]*PRIVATE KEY-----", "").replaceAll("\\s", "");
+        byte[] der = Base64.getDecoder().decode(pem);
+        if (pkcs1) der = pkcs1ToPkcs8(der);
         return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(der));
     }
 
@@ -350,7 +402,15 @@ public class GithubAppService {
             return token; // used once to verify ownership, never stored
         } catch(ResponseStatusException e){throw e;} catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"Unable to reach GitHub: "+e.getMessage(),e);}
     }
-    private void requireConfigured(){if(appId.isBlank()||privateKeyPem.isBlank()||appSlug.isBlank()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"GitHub integration is not configured on the COBUG backend yet.");}
+    private void requireConfigured() {
+        List<String> missing = getMissingConfig();
+        if (!missing.isEmpty()) {
+            throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "GitHub integration is not configured on the backend. Missing environment variable(s): " + String.join(", ", missing) + ". Please set them in your Render dashboard."
+            );
+        }
+    }
     private String randomState(){return UUID.randomUUID().toString().replace("-","")+UUID.randomUUID().toString().replace("-","");}
     private String urlEncode(String v){return java.net.URLEncoder.encode(v,StandardCharsets.UTF_8);}
     private ResponseStatusException bad(String s){return new ResponseStatusException(HttpStatus.BAD_REQUEST,s);}
