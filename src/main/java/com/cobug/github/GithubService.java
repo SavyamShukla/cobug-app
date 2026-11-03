@@ -85,11 +85,13 @@ public class GithubService {
         r.setFullName(full);
         r.setBranch(branch);
         repoRepository.save(r);
-        try {
-            mainVersionService.snapshotFromGithub(projectId, email, r.getBranch(), "Initial Main snapshot · " + r.getFullName());
-        } catch (RuntimeException ex) {
-            log.error("[GITHUB CONNECT] Initial Main snapshot failed for project {}. Rolling back repository connection.", projectId, ex);
-            throw ex;
+        if (!mainVersionService.hasVersions(projectId)) {
+            try {
+                mainVersionService.snapshotFromGithub(projectId, email, r.getBranch(), "Initial Main snapshot · " + r.getFullName());
+            } catch (RuntimeException ex) {
+                log.error("[GITHUB CONNECT] Initial Main snapshot failed for project {}. Rolling back repository connection.", projectId, ex);
+                throw ex;
+            }
         }
         return new GithubDtos.RepositoryResponse(r.getOwner(),r.getRepository(),r.getFullName(),r.getBranch(),r.getConnectedAt());
     }

@@ -72,12 +72,14 @@ public class AiSettingsService {
         out.put("customOpenAiKey", s.getCustomOpenAiKey() == null ? "" : s.getCustomOpenAiKey());
         out.put("customOllamaUrl", s.getCustomOllamaUrl() == null ? "http://localhost:11434" : s.getCustomOllamaUrl());
         out.put("customOllamaModel", s.getCustomOllamaModel() == null ? "qwen2.5-coder:3b" : s.getCustomOllamaModel());
+        out.put("customGroqKey", s.getCustomGroqKey() == null ? "" : s.getCustomGroqKey());
+        out.put("customGroqModel", s.getCustomGroqModel() == null ? "llama-3.3-70b-versatile" : s.getCustomGroqModel());
         out.put("includeProjectContext", s.isIncludeProjectContext());
         out.put("includeActivityContext", s.isIncludeActivityContext());
         out.put("automaticAssistance", s.isAutomaticAssistance());
         out.put("testActivationEnabled", testActivationEnabled);
         out.put("activationCredits", activationCredits);
-        out.put("cloudProviders", new String[]{"ollama-cloud", "gemini", "openai"});
+        out.put("cloudProviders", new String[]{"ollama-cloud", "gemini", "openai", "groq"});
         out.put("transactions", transactions.findTop20ByUserOrderByCreatedAtDesc(s.getUser()).stream().map(t -> {
             Map<String,Object> row = new LinkedHashMap<>();
             row.put("id", t.getId());
@@ -94,7 +96,7 @@ public class AiSettingsService {
     public AiSettings update(String email, String provider, String model, String localUrl,
                              Boolean includeProjectContext, Boolean includeActivityContext,
                              Boolean automaticAssistance) {
-        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, null, null, null, null, null);
+        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, null, null, null, null, null, null, null);
     }
 
     public AiSettings update(String email, String provider, String model, String localUrl,
@@ -102,24 +104,23 @@ public class AiSettingsService {
                              Boolean automaticAssistance, String plan,
                              String customGeminiKey, String customOpenAiKey,
                              String customOllamaUrl, String customOllamaModel) {
-        AiSettings s = getOrCreate(email);
-        String currentPlan = s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
+        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, plan, customGeminiKey, customOpenAiKey, customOllamaUrl, customOllamaModel, null, null);
+    }
 
-        if (plan != null && !plan.isBlank() && "go".equalsIgnoreCase(plan.trim())) {
-            s.setPlan("go");
-            currentPlan = "go";
-            s.setProvider("local-engine");
+    public AiSettings update(String email, String provider, String model, String localUrl,
+                             Boolean includeProjectContext, Boolean includeActivityContext,
+                             Boolean automaticAssistance, String plan,
+                             String customGeminiKey, String customOpenAiKey,
+                             String customOllamaUrl, String customOllamaModel,
+                             String customGroqKey, String customGroqModel) {
+        AiSettings s = getOrCreate(email);
+
+        if (plan != null && !plan.isBlank()) {
+            s.setPlan(plan.toLowerCase().trim());
         }
 
         if (provider != null && !provider.isBlank()) {
-            String norm = normalizeProvider(provider);
-            if ("go".equals(currentPlan) && ("gemini".equals(norm) || "openai".equals(norm) || "ollama".equals(norm) || "ollama-cloud".equals(norm))) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "Custom AI providers (Gemini, ChatGPT, Ollama) require COBUG Plus (₹99/month).");
-            }
-            s.setProvider(norm);
-        } else if ("go".equals(currentPlan)) {
-            s.setProvider("local-engine");
+            s.setProvider(normalizeProvider(provider));
         }
 
         if (model != null && !model.isBlank()) s.setModel(model.trim());
@@ -131,6 +132,8 @@ public class AiSettingsService {
         if (customOpenAiKey != null) s.setCustomOpenAiKey(customOpenAiKey.trim());
         if (customOllamaUrl != null && !customOllamaUrl.isBlank()) s.setCustomOllamaUrl(customOllamaUrl.trim());
         if (customOllamaModel != null && !customOllamaModel.isBlank()) s.setCustomOllamaModel(customOllamaModel.trim());
+        if (customGroqKey != null) s.setCustomGroqKey(customGroqKey.trim());
+        if (customGroqModel != null && !customGroqModel.isBlank()) s.setCustomGroqModel(customGroqModel.trim());
         return repository.save(s);
     }
 
@@ -192,6 +195,7 @@ public class AiSettingsService {
         if (p.equals("local") || p.equals("ollama-local")) return "ollama";
         if (p.equals("cloud-ollama")) return "ollama-cloud";
         if (p.equals("chatgpt")) return "openai";
+        if (p.equals("groq") || p.equals("groq-cloud")) return "groq";
         if (p.equals("intent") || p.equals("intent-detector") || p.equals("local-intent")) return "local-engine";
         return p;
     }

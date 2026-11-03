@@ -80,6 +80,11 @@ public class MainVersionService {
     }
 
     @Transactional(readOnly = true)
+    public boolean hasVersions(UUID projectId) {
+        return versions.findTopByProjectIdOrderByVersionNumberDesc(projectId).isPresent();
+    }
+
+    @Transactional(readOnly = true)
     public List<Map<String,Object>> list(UUID projectId, String email) {
         access.requireMember(projectId, email);
         return versions.findByProjectIdOrderByVersionNumberDesc(projectId).stream().map(this::summary).toList();

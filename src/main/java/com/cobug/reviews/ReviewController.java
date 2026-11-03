@@ -79,8 +79,12 @@ public class ReviewController {
             Authentication a
     ) {
         byte[] bytes = service.downloadTestPackage(projectId, reviewId, a.getName(), mainVersionId);
+        Map<String, Object> details = service.get(projectId, reviewId, a.getName());
+        String author = details.get("authorName") != null ? String.valueOf(details.get("authorName")).replaceAll("[/\\\\:*?\"<>|]", "_").trim() : "member";
+        if (author.isEmpty()) author = "member";
+        String filename = "work(" + author + ").zip";
         return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=COBUG-review-test-" + reviewId + ".zip")
+                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
                 .header("Content-Type", "application/zip")
                 .body(bytes);
     }

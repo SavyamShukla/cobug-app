@@ -31,10 +31,6 @@ public class AiProviderRouter implements AiProvider {
     }
 
     private AiProvider active(String email, AiSettings settings) {
-        String plan = settings == null || settings.getPlan() == null || settings.getPlan().isBlank() ? "go" : settings.getPlan().toLowerCase().trim();
-        if ("go".equals(plan)) {
-            return new LocalEngineFallbackProvider();
-        }
         String p = normalize(settings.getProvider());
         return switch (p) {
             case "gemini" -> gemini;
@@ -46,27 +42,28 @@ public class AiProviderRouter implements AiProvider {
     }
 
     private static class LocalEngineFallbackProvider implements AiProvider {
-        private static final String UPGRADE_MSG =
-                "You are on the COBUG Go plan. You need to upgrade to Plus to talk to dynamic AI.";
+        private static final String ENGINE_MSG =
+                "I am COBUG's Local Intent Engine. I handle roadmap, tasks, members, and deterministic project operations. " +
+                "To chat with dynamic AI models, add your API keys (Gemini, ChatGPT, Ollama, Groq) in Settings → AI Integration.";
 
         @Override
         public String answer(UUID projectId, String userEmail, String question) {
-            return UPGRADE_MSG;
+            return ENGINE_MSG;
         }
 
         @Override
         public String answer(UUID projectId, String userEmail, String question, List<Map<String, String>> history) {
-            return UPGRADE_MSG;
+            return ENGINE_MSG;
         }
 
         @Override
         public String answer(UUID projectId, String userEmail, String question, List<Map<String, String>> history, String model) {
-            return UPGRADE_MSG;
+            return ENGINE_MSG;
         }
 
         @Override
         public String answerGlobal(String userEmail, String question, List<Map<String, String>> history) {
-            return UPGRADE_MSG;
+            return ENGINE_MSG;
         }
 
         @Override
@@ -105,21 +102,7 @@ public class AiProviderRouter implements AiProvider {
         return settingsService.prepareRequest(email);
     }
 
-    private void ensureCloud(AiSettings s) {
-        String plan = s == null || s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
-        if ("go".equals(plan)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.PAYMENT_REQUIRED,
-                    "Cloud and custom AI models require COBUG Plus (₹99/month) or Pro (₹199/month). Open Settings → AI Integration.");
-        }
-    }
-
     private String run(String email, AiSettings s, java.util.function.Function<AiProvider,String> action) {
-        String plan = s == null || s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
-        if ("go".equals(plan)) {
-            return "You are on the COBUG Go plan. Upgrade to Plus (₹99/month) or Pro (₹199/month) in Settings → AI Integration to chat with dynamic AI models.";
-        }
-        ensureCloud(s);
         AiProvider selected = active(email, s);
         return action.apply(selected);
     }

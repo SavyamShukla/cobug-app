@@ -55,6 +55,12 @@ public class AiSettings {
     @Column(length = 160)
     private String customOllamaModel = "qwen2.5-coder:3b";
 
+    @Column(length = 255)
+    private String customGroqKey = "";
+
+    @Column(length = 160)
+    private String customGroqModel = "llama-3.3-70b-versatile";
+
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
@@ -70,6 +76,7 @@ public class AiSettings {
         if (plan == null || plan.isBlank()) plan = "go";
         if (customOllamaUrl == null || customOllamaUrl.isBlank()) customOllamaUrl = "http://localhost:11434";
         if (customOllamaModel == null || customOllamaModel.isBlank()) customOllamaModel = "qwen2.5-coder:3b";
+        if (customGroqModel == null || customGroqModel.isBlank()) customGroqModel = "llama-3.3-70b-versatile";
         updatedAt = LocalDateTime.now();
     }
 
@@ -105,5 +112,9 @@ public class AiSettings {
     public void setCustomOllamaUrl(String customOllamaUrl) { this.customOllamaUrl = customOllamaUrl; }
     public String getCustomOllamaModel() { return customOllamaModel; }
     public void setCustomOllamaModel(String customOllamaModel) { this.customOllamaModel = customOllamaModel; }
+    public String getCustomGroqKey() { return customGroqKey; }
+    public void setCustomGroqKey(String customGroqKey) { this.customGroqKey = customGroqKey; }
+    public String getCustomGroqModel() { return customGroqModel; }
+    public void setCustomGroqModel(String customGroqModel) { this.customGroqModel = customGroqModel; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

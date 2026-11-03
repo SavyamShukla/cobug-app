@@ -724,6 +724,8 @@ public class ReviewService {
         Map<String,Object> out = new LinkedHashMap<>();
         out.put("reviewId", review.getId());
         out.put("reviewTitle", review.getTitle());
+        out.put("authorName", review.getAuthorName());
+        out.put("workNumber", review.getWorkNumber());
         out.put("mainVersionId", version.getId());
         out.put("mainVersionNumber", version.getVersionNumber());
         out.put("mainLabel", "Current Main");

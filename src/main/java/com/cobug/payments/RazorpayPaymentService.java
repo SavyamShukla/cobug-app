@@ -36,8 +36,8 @@ public class RazorpayPaymentService {
             @Value("${cobug.razorpay.key-id:}") String keyId,
             @Value("${cobug.razorpay.key-secret:}") String keySecret,
             @Value("${cobug.razorpay.webhook-secret:}") String webhookSecret,
-            @Value("${cobug.razorpay.plus-amount-paise:9900}") long plusAmountPaise,
-            @Value("${cobug.razorpay.pro-amount-paise:19900}") long proAmountPaise) {
+            @Value("${cobug.razorpay.plus-amount-paise:100}") long plusAmountPaise,
+            @Value("${cobug.razorpay.pro-amount-paise:200}") long proAmountPaise) {
         this.users = users;
         this.transactions = transactions;
         this.aiSettings = aiSettings;
