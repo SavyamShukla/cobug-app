@@ -31,6 +31,10 @@ public class AiProviderRouter implements AiProvider {
     }
 
     private AiProvider active(String email, AiSettings settings) {
+        String plan = settings == null || settings.getPlan() == null || settings.getPlan().isBlank() ? "go" : settings.getPlan().toLowerCase().trim();
+        if ("go".equals(plan)) {
+            return new LocalEngineFallbackProvider();
+        }
         String p = normalize(settings.getProvider());
         return switch (p) {
             case "gemini" -> gemini;
@@ -44,7 +48,7 @@ public class AiProviderRouter implements AiProvider {
     private static class LocalEngineFallbackProvider implements AiProvider {
         private static final String ENGINE_MSG =
                 "I am COBUG's Local Intent Engine. I handle roadmap, tasks, members, and deterministic project operations. " +
-                "To chat with dynamic AI models, add your API keys (Gemini, ChatGPT, Ollama, Groq) in Settings → AI Integration.";
+                "To chat with dynamic AI models (Gemini, ChatGPT, Groq, Ollama), upgrade to COBUG Plus (₹1/month) or Pro (₹2/month) in Settings → AI Integration.";
 
         @Override
         public String answer(UUID projectId, String userEmail, String question) {

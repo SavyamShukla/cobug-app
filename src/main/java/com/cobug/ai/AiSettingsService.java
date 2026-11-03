@@ -119,8 +119,18 @@ public class AiSettingsService {
             s.setPlan(plan.toLowerCase().trim());
         }
 
+        String effectivePlan = s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
+
         if (provider != null && !provider.isBlank()) {
-            s.setProvider(normalizeProvider(provider));
+            String norm = normalizeProvider(provider);
+            if (!"local-engine".equals(norm) && "go".equals(effectivePlan)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN,
+                        "COBUG Go plan only supports the Local Intent Engine. Upgrade to Plus (₹1/month) or Pro (₹2/month) to connect " + norm + ".");
+            }
+            s.setProvider(norm);
+        } else if ("go".equals(effectivePlan)) {
+            s.setProvider("local-engine");
         }
 
         if (model != null && !model.isBlank()) s.setModel(model.trim());
