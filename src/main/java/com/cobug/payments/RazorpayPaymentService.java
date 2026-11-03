@@ -83,6 +83,32 @@ public class RazorpayPaymentService {
                     .put("user_id", user.getId().toString()));
             Order order = client.orders.create(options);
 
+            String paymentLinkUrl = "";
+            try {
+                JSONObject linkRequest = new JSONObject();
+                linkRequest.put("amount", targetAmount);
+                linkRequest.put("currency", "INR");
+                linkRequest.put("accept_partial", false);
+                linkRequest.put("description", "COBUG " + selectedPlan.toUpperCase() + " Plan (" + (isPro ? "₹2/month" : "₹1/month") + ")");
+                JSONObject customer = new JSONObject();
+                if (user.getEmail() != null && !user.getEmail().isBlank()) customer.put("email", user.getEmail());
+                if (user.getName() != null && !user.getName().isBlank()) customer.put("name", user.getName());
+                linkRequest.put("customer", customer);
+                linkRequest.put("notify", new JSONObject().put("sms", false).put("email", false));
+                linkRequest.put("notes", new JSONObject()
+                        .put("purpose", purpose)
+                        .put("plan", selectedPlan)
+                        .put("order_id", (String) order.get("id"))
+                        .put("user_id", user.getId().toString()));
+
+                com.razorpay.PaymentLink pLink = client.paymentLink.create(linkRequest);
+                if (pLink != null && pLink.has("short_url")) {
+                    paymentLinkUrl = pLink.get("short_url");
+                }
+            } catch (Exception linkEx) {
+                // If payment link is not enabled on account, continue with standard order
+            }
+
             RazorpayPaymentTransaction tx = new RazorpayPaymentTransaction();
             tx.setUser(user);
             tx.setRazorpayOrderId(order.get("id"));
@@ -91,7 +117,7 @@ public class RazorpayPaymentService {
             tx.setCurrency("INR");
             tx.setStatus(RazorpayPaymentTransaction.Status.CREATED);
             transactions.save(tx);
-            return new OrderResponse(order.get("id"), targetAmount, "INR", keyId, selectedPlan);
+            return new OrderResponse(order.get("id"), targetAmount, "INR", keyId, selectedPlan, paymentLinkUrl);
         } catch (RazorpayException e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Unable to create Razorpay order: " + e.getMessage(), e);
         }
@@ -181,7 +207,7 @@ public class RazorpayPaymentService {
     }
 
     public record Config(boolean configured, String keyId, long amount, long plusAmount, long proAmount, String currency) {}
-    public record OrderResponse(String orderId, long amount, String currency, String keyId, String plan) {}
+    public record OrderResponse(String orderId, long amount, String currency, String keyId, String plan, String paymentLinkUrl) {}
     public record VerifyRequest(String orderId, String paymentId, String signature) {}
     public record VerifyResponse(boolean success, String message, String plan) {}
 }
