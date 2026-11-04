@@ -2,12 +2,15 @@ package com.cobug.ai;
 
 import com.cobug.auth.User;
 import com.cobug.auth.UserRepository;
+import com.cobug.payments.RazorpayPaymentTransaction;
+import com.cobug.payments.RazorpayPaymentTransactionRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -15,6 +18,7 @@ public class AiSettingsService {
     private final AiSettingsRepository repository;
     private final UserRepository users;
     private final AiCreditTransactionRepository transactions;
+    private final RazorpayPaymentTransactionRepository paymentTransactions;
     private final String defaultProvider;
     private final String defaultModel;
     private final String defaultLocalUrl;
@@ -27,6 +31,7 @@ public class AiSettingsService {
             AiSettingsRepository repository,
             UserRepository users,
             AiCreditTransactionRepository transactions,
+            RazorpayPaymentTransactionRepository paymentTransactions,
             @Value("${cobug.ai.provider:ollama}") String defaultProvider,
             @Value("${cobug.ollama.model:qwen2.5-coder:3b}") String defaultModel,
             @Value("${cobug.ollama.url:http://localhost:11434}") String defaultLocalUrl,
@@ -37,6 +42,7 @@ public class AiSettingsService {
         this.repository = repository;
         this.users = users;
         this.transactions = transactions;
+        this.paymentTransactions = paymentTransactions;
         this.defaultProvider = normalizeProvider(defaultProvider);
         this.defaultModel = defaultModel == null ? "" : defaultModel.trim();
         this.defaultLocalUrl = defaultLocalUrl == null || defaultLocalUrl.isBlank() ? "http://localhost:11434" : defaultLocalUrl.trim();
@@ -46,17 +52,56 @@ public class AiSettingsService {
         this.activationCredits = Math.max(1, activationCredits);
     }
 
+    public String resolveActivePaidPlan(User user) {
+        if (paymentTransactions == null || user == null) return null;
+        try {
+            List<RazorpayPaymentTransaction> paidTxs = paymentTransactions.findByUserAndStatusOrderByPaidAtDesc(user, RazorpayPaymentTransaction.Status.PAID);
+            if (paidTxs != null && !paidTxs.isEmpty()) {
+                RazorpayPaymentTransaction latest = paidTxs.get(0);
+                boolean isPro = latest.getAmount() >= 200 || (latest.getPurpose() != null && latest.getPurpose().toUpperCase().contains("PRO"));
+                return isPro ? "pro" : "plus";
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public String autoSelectProvider(AiSettings s) {
+        if (s.getCustomGeminiKey() != null && !s.getCustomGeminiKey().isBlank()) return "gemini";
+        if (s.getCustomGroqKey() != null && !s.getCustomGroqKey().isBlank()) return "groq";
+        if (s.getCustomOpenAiKey() != null && !s.getCustomOpenAiKey().isBlank()) return "openai";
+        if (s.getCustomOllamaUrl() != null && !s.getCustomOllamaUrl().isBlank() && !"http://localhost:11434".equals(s.getCustomOllamaUrl())) return "ollama";
+        return "gemini";
+    }
+
     public AiSettings getOrCreate(String email) {
         User user = user(email);
-        return repository.findByUser(user).orElseGet(() -> {
-            AiSettings settings = new AiSettings();
-            settings.setUser(user);
-            settings.setProvider(defaultProvider);
-            settings.setModel(defaultModel);
-            settings.setLocalOllamaUrl(defaultLocalUrl);
-            settings.setCredits(0);
-            return repository.save(settings);
+        AiSettings settings = repository.findByUser(user).orElseGet(() -> {
+            AiSettings s = new AiSettings();
+            s.setUser(user);
+            s.setProvider(defaultProvider);
+            s.setModel(defaultModel);
+            s.setLocalOllamaUrl(defaultLocalUrl);
+            s.setCredits(0);
+            return repository.save(s);
         });
+
+        String paidPlan = resolveActivePaidPlan(user);
+        if (paidPlan != null) {
+            boolean changed = false;
+            if ("go".equalsIgnoreCase(settings.getPlan()) || ("plus".equalsIgnoreCase(settings.getPlan()) && "pro".equalsIgnoreCase(paidPlan))) {
+                settings.setPlan(paidPlan);
+                settings.setCloudEnabled(true);
+                changed = true;
+            }
+            if ("local-engine".equalsIgnoreCase(settings.getProvider()) || settings.getProvider() == null || settings.getProvider().isBlank()) {
+                settings.setProvider(autoSelectProvider(settings));
+                changed = true;
+            }
+            if (changed) {
+                settings = repository.save(settings);
+            }
+        }
+        return settings;
     }
 
     public Map<String,Object> dto(String email) {
@@ -114,9 +159,19 @@ public class AiSettingsService {
                              String customOllamaUrl, String customOllamaModel,
                              String customGroqKey, String customGroqModel) {
         AiSettings s = getOrCreate(email);
+        User user = user(email);
+        String paidPlan = resolveActivePaidPlan(user);
 
         if (plan != null && !plan.isBlank()) {
-            s.setPlan(plan.toLowerCase().trim());
+            String target = plan.toLowerCase().trim();
+            // Prevent accidental downgrades from stale client localstorage if user has an active paid subscription
+            if ("go".equals(target) && paidPlan != null) {
+                s.setPlan(paidPlan);
+            } else {
+                s.setPlan(target);
+            }
+        } else if (paidPlan != null && "go".equalsIgnoreCase(s.getPlan())) {
+            s.setPlan(paidPlan);
         }
 
         String effectivePlan = s.getPlan() == null || s.getPlan().isBlank() ? "go" : s.getPlan().toLowerCase().trim();
@@ -131,6 +186,8 @@ public class AiSettingsService {
             s.setProvider(norm);
         } else if ("go".equals(effectivePlan)) {
             s.setProvider("local-engine");
+        } else if ("local-engine".equals(s.getProvider())) {
+            s.setProvider(autoSelectProvider(s));
         }
 
         if (model != null && !model.isBlank()) s.setModel(model.trim());
@@ -156,7 +213,7 @@ public class AiSettingsService {
         } else {
             s.setCloudEnabled(true);
             if ("local-engine".equals(s.getProvider())) {
-                s.setProvider("gemini");
+                s.setProvider(autoSelectProvider(s));
             }
         }
         return repository.save(s);
@@ -172,7 +229,7 @@ public class AiSettingsService {
         s.setPlan(p);
         s.setCloudEnabled(true);
         if ("local-engine".equals(s.getProvider())) {
-            s.setProvider("gemini");
+            s.setProvider(autoSelectProvider(s));
             if (s.getModel() == null || s.getModel().isBlank()) s.setModel(defaultGeminiModel);
         }
         return repository.save(s);

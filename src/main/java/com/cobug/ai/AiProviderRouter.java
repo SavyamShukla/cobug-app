@@ -12,6 +12,8 @@ import java.util.UUID;
 @Primary
 public class AiProviderRouter implements AiProvider {
     private final GeminiAiService gemini;
+    private final OpenAiAiService openAi;
+    private final GroqAiService groq;
     private final OllamaAiService ollama;
     private final OllamaCloudAiService ollamaCloud;
     private final AiSettingsService settingsService;
@@ -19,11 +21,15 @@ public class AiProviderRouter implements AiProvider {
 
     public AiProviderRouter(
             GeminiAiService gemini,
+            OpenAiAiService openAi,
+            GroqAiService groq,
             OllamaAiService ollama,
             OllamaCloudAiService ollamaCloud,
             AiSettingsService settingsService,
             @Value("${cobug.ai.provider:ollama}") String provider) {
         this.gemini = gemini;
+        this.openAi = openAi;
+        this.groq = groq;
         this.ollama = ollama;
         this.ollamaCloud = ollamaCloud;
         this.settingsService = settingsService;
@@ -35,14 +41,29 @@ public class AiProviderRouter implements AiProvider {
         if ("go".equals(plan)) {
             return new LocalEngineFallbackProvider();
         }
+
         String p = normalize(settings.getProvider());
+
+        // For paid subscribers (Plus & Pro): if provider is local-engine or empty, auto-route to configured provider
+        if ("local-engine".equals(p) || "local_engine".equals(p) || p.isBlank()) {
+            if (hasText(settings.getCustomGeminiKey())) return gemini;
+            if (hasText(settings.getCustomGroqKey())) return groq;
+            if (hasText(settings.getCustomOpenAiKey())) return openAi;
+            return gemini;
+        }
+
         return switch (p) {
             case "gemini" -> gemini;
+            case "openai", "chatgpt" -> openAi;
+            case "groq" -> groq;
             case "ollama" -> ollama;
             case "ollama-cloud" -> ollamaCloud;
-            case "local-engine", "local_engine" -> new LocalEngineFallbackProvider();
-            default -> new LocalEngineFallbackProvider();
+            default -> gemini;
         };
+    }
+
+    private boolean hasText(String s) {
+        return s != null && !s.isBlank();
     }
 
     private static class LocalEngineFallbackProvider implements AiProvider {
@@ -85,6 +106,8 @@ public class AiProviderRouter implements AiProvider {
         if (settings.getModel() != null && !settings.getModel().isBlank()) return settings.getModel().trim();
         return switch (normalize(settings.getProvider())) {
             case "gemini" -> gemini.model();
+            case "openai", "chatgpt" -> openAi.model();
+            case "groq" -> groq.model();
             case "ollama-cloud" -> ollamaCloud.model();
             case "local-engine", "local_engine" -> "local-engine";
             default -> ollama.model();
@@ -96,6 +119,8 @@ public class AiProviderRouter implements AiProvider {
         String p = provider.trim().toLowerCase();
         if (p.equals("local") || p.equals("ollama-local")) return "ollama";
         if (p.equals("cloud-ollama")) return "ollama-cloud";
+        if (p.equals("chatgpt")) return "openai";
+        if (p.equals("groq") || p.equals("groq-cloud")) return "groq";
         if (p.equals("local-engine") || p.equals("local_engine") || p.equals("intent")) return "local-engine";
         return p;
     }
@@ -136,6 +161,8 @@ public class AiProviderRouter implements AiProvider {
     @Override
     public String model() {
         return defaultProvider.equals("gemini") ? gemini.model()
+                : defaultProvider.equals("openai") ? openAi.model()
+                : defaultProvider.equals("groq") ? groq.model()
                 : defaultProvider.equals("ollama-cloud") ? ollamaCloud.model()
                 : ollama.model();
     }
