@@ -92,7 +92,7 @@ public class OpenAiAiService implements AiProvider {
             ctx = "Project context could not be fully loaded. Answer the question using general knowledge.";
         }
 
-        String systemPrompt = "You are COBUG AI, an expert software engineering assistant. Analyze code, explain architecture, diagnose bugs, and help with project operations.\n"
+        String systemPrompt = "You are Tedo, COBUG's AI assistant and expert software engineering companion. Analyze code, explain architecture, diagnose bugs, and help with project operations.\n"
                 + "USER CONTEXT & RELEVANT PROJECT DETAILS:\n" + ctx;
 
         return executeChat(key, effectiveModel, systemPrompt, question, history);
@@ -118,7 +118,7 @@ public class OpenAiAiService implements AiProvider {
             ctx = "User profile context is unavailable.";
         }
 
-        String systemPrompt = "You are COBUG AI, a helpful platform-wide assistant for COBUG.\n"
+        String systemPrompt = "You are Tedo, COBUG's AI assistant across the entire platform.\n"
                 + "USER PROFILE CONTEXT:\n" + ctx;
 
         return executeChat(key, effectiveModel, systemPrompt, question, history);

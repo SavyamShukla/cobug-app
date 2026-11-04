@@ -93,7 +93,7 @@ public class GeminiAiService implements AiProvider {
             ctx = "Project context could not be fully loaded. Answer using software engineering knowledge.";
         }
 
-        String prompt = "You are COBUG AI inside a specific COBUG project.\n"
+        String prompt = "You are Tedo, COBUG's AI assistant inside a specific COBUG project.\n"
                 + "When the user asks about this project, use the supplied context. Be concise, clear, and helpful.\n\n"
                 + historyPrompt(history)
                 + "USER QUESTION:\n" + q + "\n\nPROJECT CONTEXT:\n" + ctx;
@@ -123,7 +123,7 @@ public class GeminiAiService implements AiProvider {
             ctx = "Profile context is temporarily unavailable.";
         }
 
-        String prompt = "You are COBUG AI, the user's assistant across the entire COBUG platform.\n"
+        String prompt = "You are Tedo, COBUG's AI assistant across the entire COBUG platform.\n"
                 + "Be friendly, clear and helpful. Use the profile context below when relevant.\n\n"
                 + historyPrompt(history)
                 + "USER MESSAGE:\n" + q + "\n\nWHOLE PROFILE CONTEXT:\n" + ctx;

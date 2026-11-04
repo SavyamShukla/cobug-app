@@ -100,7 +100,7 @@ public class GroqAiService implements AiProvider {
             ctx = "Project context could not be fully loaded. Answer using software development expertise.";
         }
 
-        String systemPrompt = "You are COBUG AI, powered by Groq's high-speed neural engine. Deliver clean, accurate code explanations and debugging fixes.\n"
+        String systemPrompt = "You are Tedo, COBUG's AI assistant, powered by Groq's high-speed neural engine. Deliver clean, accurate code explanations and debugging fixes.\n"
                 + "RELEVANT CONTEXT:\n" + ctx;
 
         return executeChat(key, effectiveModel, systemPrompt, question, history);
@@ -127,7 +127,7 @@ public class GroqAiService implements AiProvider {
             ctx = "Profile context is unavailable.";
         }
 
-        String systemPrompt = "You are COBUG AI, powered by Groq. You help the user across their account and projects.\n"
+        String systemPrompt = "You are Tedo, COBUG's AI assistant, powered by Groq. You help the user across their account and projects.\n"
                 + "USER PROFILE CONTEXT:\n" + ctx;
 
         return executeChat(key, effectiveModel, systemPrompt, question, history);

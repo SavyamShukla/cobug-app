@@ -23,7 +23,7 @@ public class ProjectChatService {
     private static final UUID AI_USER_ID =
             UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    private static final String AI_NAME = "COBUG AI";
+    private static final String AI_NAME = "Tedo";
     private static final String AI_EMAIL = "ai@cobug.local";
 
     private static final Pattern AI_MENTION =
@@ -210,7 +210,7 @@ public class ProjectChatService {
                     ex
             );
 
-            reply = "COBUG AI could not complete the request right now. "
+            reply = "Tedo could not complete the request right now. "
                     + "Your message was saved successfully. "
                     + "Check the backend logs for the routing/provider error.";
         }
@@ -270,7 +270,7 @@ public class ProjectChatService {
         if (message.isAiGenerated()) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "COBUG AI messages cannot be deleted."
+                    "Tedo messages cannot be deleted."
             );
         }
 

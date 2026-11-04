@@ -211,7 +211,7 @@ public class LocalIntentEngine {
         if (lower.matches(".*\\b(bye|goodbye|see you|good night)\\b.*")) return "Goodbye! 👋 I'm here whenever you need me.";
         if (lower.matches(".*\\b(thanks|thank you|thx)\\b.*")) return "You're very welcome! 😊 Anything else I can look up for you?";
         String name = firstName(c.email());
-        return "Hey" + (name.isBlank() ? "" : " " + name) + "! 👋 I'm COBUG AI. I can look things up for you in COBUG.\n\n"
+        return "Hey" + (name.isBlank() ? "" : " " + name) + "! 🧸 I'm Tedo. I can look things up for you in COBUG.\n\n"
                 + block("list", "Try asking me", List.of(
                         row("Show my projects", "Everything you are part of"),
                         row("What are my tasks?", "Your personal to-do list"),

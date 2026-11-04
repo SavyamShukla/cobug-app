@@ -58,7 +58,7 @@ public class ProjectChatWebSocketHandler extends TextWebSocketHandler {
         broadcast(id,"CHAT_MESSAGE",toMap(saved,clientMessageId));
 
         if (ProjectChatService.containsAiMention(content)) {
-            broadcastTyping(id, "AI", "COBUG AI", "ai@cobug.local", true);
+            broadcastTyping(id, "AI", "Tedo", "ai@cobug.local", true);
             CompletableFuture
                     .supplyAsync(() -> chat.generateAiReply(id, email, content, clientIntent, clientConfidence))
                     .thenAccept(ai -> {
@@ -71,12 +71,12 @@ public class ProjectChatWebSocketHandler extends TextWebSocketHandler {
                             send(s, "AI_RESPONSE", payload);
                             broadcast(id, "CHAT_MESSAGE", payload);
                         }
-                        broadcastTyping(id, "AI", "COBUG AI", "ai@cobug.local", false);
+                        broadcastTyping(id, "AI", "Tedo", "ai@cobug.local", false);
                     })
                     .exceptionally(ex -> {
                         log.error("[CHAT AI] Async generation/delivery failed for project {}", id, ex);
-                        broadcastTyping(id, "AI", "COBUG AI", "ai@cobug.local", false);
-                        send(s, "AI_ERROR", Map.of("message", "COBUG AI could not complete the request right now."));
+                        broadcastTyping(id, "AI", "Tedo", "ai@cobug.local", false);
+                        send(s, "AI_ERROR", Map.of("message", "Tedo could not complete the request right now."));
                         return null;
                     });
         }
