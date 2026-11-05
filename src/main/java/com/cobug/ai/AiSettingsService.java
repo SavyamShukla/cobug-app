@@ -115,6 +115,8 @@ public class AiSettingsService {
         out.put("plan", s.getPlan());
         out.put("customGeminiKey", s.getCustomGeminiKey() == null ? "" : s.getCustomGeminiKey());
         out.put("customOpenAiKey", s.getCustomOpenAiKey() == null ? "" : s.getCustomOpenAiKey());
+        out.put("customOpenAiBaseUrl", s.getCustomOpenAiBaseUrl() == null ? "https://api.openai.com/v1" : s.getCustomOpenAiBaseUrl());
+        out.put("customOpenAiModel", s.getCustomOpenAiModel() == null ? "chatgpt-4o-latest" : s.getCustomOpenAiModel());
         out.put("customOllamaUrl", s.getCustomOllamaUrl() == null ? "http://localhost:11434" : s.getCustomOllamaUrl());
         out.put("customOllamaModel", s.getCustomOllamaModel() == null ? "qwen2.5-coder:3b" : s.getCustomOllamaModel());
         out.put("customGroqKey", s.getCustomGroqKey() == null ? "" : s.getCustomGroqKey());
@@ -141,7 +143,7 @@ public class AiSettingsService {
     public AiSettings update(String email, String provider, String model, String localUrl,
                              Boolean includeProjectContext, Boolean includeActivityContext,
                              Boolean automaticAssistance) {
-        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, null, null, null, null, null, null, null);
+        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, null, null, null, null, null, null, null, null, null);
     }
 
     public AiSettings update(String email, String provider, String model, String localUrl,
@@ -149,7 +151,7 @@ public class AiSettingsService {
                              Boolean automaticAssistance, String plan,
                              String customGeminiKey, String customOpenAiKey,
                              String customOllamaUrl, String customOllamaModel) {
-        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, plan, customGeminiKey, customOpenAiKey, customOllamaUrl, customOllamaModel, null, null);
+        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, plan, customGeminiKey, customOpenAiKey, customOllamaUrl, customOllamaModel, null, null, null, null);
     }
 
     public AiSettings update(String email, String provider, String model, String localUrl,
@@ -158,6 +160,16 @@ public class AiSettingsService {
                              String customGeminiKey, String customOpenAiKey,
                              String customOllamaUrl, String customOllamaModel,
                              String customGroqKey, String customGroqModel) {
+        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, plan, customGeminiKey, customOpenAiKey, customOllamaUrl, customOllamaModel, customGroqKey, customGroqModel, null, null);
+    }
+
+    public AiSettings update(String email, String provider, String model, String localUrl,
+                             Boolean includeProjectContext, Boolean includeActivityContext,
+                             Boolean automaticAssistance, String plan,
+                             String customGeminiKey, String customOpenAiKey,
+                             String customOllamaUrl, String customOllamaModel,
+                             String customGroqKey, String customGroqModel,
+                             String customOpenAiBaseUrl, String customOpenAiModel) {
         AiSettings s = getOrCreate(email);
         User user = user(email);
         String paidPlan = resolveActivePaidPlan(user);
@@ -197,6 +209,8 @@ public class AiSettingsService {
         if (automaticAssistance != null) s.setAutomaticAssistance(automaticAssistance);
         if (customGeminiKey != null) s.setCustomGeminiKey(customGeminiKey.trim());
         if (customOpenAiKey != null) s.setCustomOpenAiKey(customOpenAiKey.trim());
+        if (customOpenAiBaseUrl != null && !customOpenAiBaseUrl.isBlank()) s.setCustomOpenAiBaseUrl(customOpenAiBaseUrl.trim());
+        if (customOpenAiModel != null && !customOpenAiModel.isBlank()) s.setCustomOpenAiModel(customOpenAiModel.trim());
         if (customOllamaUrl != null && !customOllamaUrl.isBlank()) s.setCustomOllamaUrl(customOllamaUrl.trim());
         if (customOllamaModel != null && !customOllamaModel.isBlank()) s.setCustomOllamaModel(customOllamaModel.trim());
         if (customGroqKey != null) s.setCustomGroqKey(customGroqKey.trim());

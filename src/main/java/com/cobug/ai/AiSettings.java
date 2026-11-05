@@ -46,8 +46,14 @@ public class AiSettings {
     @Column(length = 255)
     private String customGeminiKey = "";
 
-    @Column(length = 255)
+    @Column(columnDefinition = "TEXT")
     private String customOpenAiKey = "";
+
+    @Column(length = 500)
+    private String customOpenAiBaseUrl = "https://api.openai.com/v1";
+
+    @Column(length = 160)
+    private String customOpenAiModel = "chatgpt-4o-latest";
 
     @Column(length = 255)
     private String customOllamaUrl = "http://localhost:11434";
@@ -74,6 +80,8 @@ public class AiSettings {
         if (model == null) model = "";
         if (localOllamaUrl == null || localOllamaUrl.isBlank()) localOllamaUrl = "http://localhost:11434";
         if (plan == null || plan.isBlank()) plan = "go";
+        if (customOpenAiBaseUrl == null || customOpenAiBaseUrl.isBlank()) customOpenAiBaseUrl = "https://api.openai.com/v1";
+        if (customOpenAiModel == null || customOpenAiModel.isBlank()) customOpenAiModel = "chatgpt-4o-latest";
         if (customOllamaUrl == null || customOllamaUrl.isBlank()) customOllamaUrl = "http://localhost:11434";
         if (customOllamaModel == null || customOllamaModel.isBlank()) customOllamaModel = "qwen2.5-coder:3b";
         if (customGroqModel == null || customGroqModel.isBlank()) customGroqModel = "llama-3.3-70b-versatile";
@@ -108,6 +116,18 @@ public class AiSettings {
     public void setCustomGeminiKey(String customGeminiKey) { this.customGeminiKey = customGeminiKey; }
     public String getCustomOpenAiKey() { return customOpenAiKey; }
     public void setCustomOpenAiKey(String customOpenAiKey) { this.customOpenAiKey = customOpenAiKey; }
+    public String getCustomOpenAiBaseUrl() {
+        return customOpenAiBaseUrl == null || customOpenAiBaseUrl.isBlank() ? "https://api.openai.com/v1" : customOpenAiBaseUrl;
+    }
+    public void setCustomOpenAiBaseUrl(String customOpenAiBaseUrl) {
+        this.customOpenAiBaseUrl = customOpenAiBaseUrl == null ? "https://api.openai.com/v1" : customOpenAiBaseUrl.trim();
+    }
+    public String getCustomOpenAiModel() {
+        return customOpenAiModel == null || customOpenAiModel.isBlank() ? "chatgpt-4o-latest" : customOpenAiModel;
+    }
+    public void setCustomOpenAiModel(String customOpenAiModel) {
+        this.customOpenAiModel = customOpenAiModel == null ? "chatgpt-4o-latest" : customOpenAiModel.trim();
+    }
     public String getCustomOllamaUrl() { return customOllamaUrl; }
     public void setCustomOllamaUrl(String customOllamaUrl) { this.customOllamaUrl = customOllamaUrl; }
     public String getCustomOllamaModel() { return customOllamaModel; }
