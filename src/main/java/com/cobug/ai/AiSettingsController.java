@@ -26,23 +26,23 @@ public class AiSettingsController {
             String customOllamaUrl,
             String customOllamaModel,
             String customGroqKey,
-            String customGroqModel,
-            String customOpenAiBaseUrl,
-            String customOpenAiModel
-    ) {}
+            String customGroqModel) {
+    }
 
     @GetMapping
-    public Map<String,Object> get(Authentication authentication) {
+    public Map<String, Object> get(Authentication authentication) {
         return service.dto(authentication.getName());
     }
 
     @PutMapping
-    public Map<String,Object> update(@RequestBody UpdateRequest request, Authentication authentication) {
-        UpdateRequest r = request == null ? new UpdateRequest(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null) : request;
+    public Map<String, Object> update(@RequestBody UpdateRequest request, Authentication authentication) {
+        UpdateRequest r = request == null
+                ? new UpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null)
+                : request;
         service.update(authentication.getName(), r.provider(), r.model(), r.localOllamaUrl(),
                 r.includeProjectContext(), r.includeActivityContext(), r.automaticAssistance(),
                 r.plan(), r.customGeminiKey(), r.customOpenAiKey(), r.customOllamaUrl(), r.customOllamaModel(),
-                r.customGroqKey(), r.customGroqModel(), r.customOpenAiBaseUrl(), r.customOpenAiModel());
+                r.customGroqKey(), r.customGroqModel());
         return service.dto(authentication.getName());
     }
 
@@ -52,7 +52,7 @@ public class AiSettingsController {
         return service.dto(authentication.getName());
     }
 
-    @PostMapping("/plan/activate")
+@PostMapping("/plan/activate")
     public Map<String,Object> activatePlan(@RequestParam(name = "plan", defaultValue = "plus") String plan, Authentication authentication) {
         service.activatePlan(authentication.getName(), plan);
         return service.dto(authentication.getName());
