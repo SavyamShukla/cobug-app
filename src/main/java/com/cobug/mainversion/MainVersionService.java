@@ -3,6 +3,7 @@ package com.cobug.mainversion;
 import com.cobug.auth.User;
 import com.cobug.github.GithubDtos;
 import com.cobug.github.GithubService;
+import com.cobug.github.SourcePathPolicy;
 import com.cobug.projects.Project;
 import com.cobug.projects.ProjectAccessService;
 import com.cobug.storage.ProjectStorageService;
@@ -108,6 +109,7 @@ public class MainVersionService {
         long next = versions.findTopByProjectIdOrderByVersionNumberDesc(projectId).map(v -> v.getVersionNumber() + 1).orElse(1L);
         List<SourceInput> inputs = request.files().stream().filter(Objects::nonNull)
                 .filter(f -> f.path() != null && !f.path().isBlank())
+                .filter(f -> !SourcePathPolicy.isIgnored(f.path()))
                 .map(f -> new SourceInput(normalize(f.path()), f.content() == null ? "" : f.content())).toList();
         if (inputs.size() > 10000) throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Too many source files.");
 
@@ -159,6 +161,7 @@ public class MainVersionService {
             String rawPath = paths[i];
             if (rawPath == null || rawPath.isBlank()) continue;
             String path = normalize(rawPath);
+            if (SourcePathPolicy.isIgnored(path)) continue;
 
             try {
                 byte[] bytes = file.getBytes();
@@ -211,6 +214,7 @@ public class MainVersionService {
                 String rawPath = entry.getName();
                 if (rawPath == null || rawPath.isBlank()) continue;
                 String path = normalize(rawPath);
+                if (SourcePathPolicy.isIgnored(path)) continue;
                 byte[] bytes = zip.readAllBytes();
                 boolean isText = looksText(bytes);
                 String content = isText ? new String(bytes, StandardCharsets.UTF_8) : null;
@@ -412,12 +416,15 @@ public class MainVersionService {
         MainSourceObject object = new MainSourceObject();
         object.setSha256(hash);
         object.setSizeBytes(bytes.length);
-        object.setBinaryArtifact(binary || !looksText(bytes));
+
+        boolean hasNull = hasNullByte(bytes) || (preferredText != null && preferredText.indexOf('\0') >= 0);
+        boolean isBinary = binary || hasNull || !looksText(bytes);
+        object.setBinaryArtifact(isBinary);
         object.setGitBlobSha(gitBlobSha(bytes));
         object.setContentType(contentType(path, object.isBinaryArtifact()));
 
         boolean large = bytes.length > largeFileThresholdBytes;
-        boolean useStorage = large || object.isBinaryArtifact();
+        boolean useStorage = large || isBinary;
         if (useStorage) {
             if (!artifactStorage.isConfigured()) {
                 throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
@@ -436,7 +443,11 @@ public class MainVersionService {
             object.setContent("");
         } else {
             object.setStorageType("DATABASE");
-            object.setContent(preferredText == null ? new String(bytes, StandardCharsets.UTF_8) : preferredText);
+            String safeContent = preferredText == null ? new String(bytes, StandardCharsets.UTF_8) : preferredText;
+            if (safeContent.indexOf('\0') >= 0) {
+                safeContent = safeContent.replace("\0", "");
+            }
+            object.setContent(safeContent);
         }
         return objects.save(object);
     }
@@ -483,10 +494,15 @@ public class MainVersionService {
         return n;
     }
 
+    private static boolean hasNullByte(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) return false;
+        for (byte b : bytes) if (b == 0) return true;
+        return false;
+    }
+
     private static boolean looksText(byte[] bytes) {
         if (bytes == null || bytes.length == 0) return true;
-        int sample = Math.min(bytes.length, 8192);
-        for (int i = 0; i < sample; i++) if (bytes[i] == 0) return false;
+        for (byte b : bytes) if (b == 0) return false;
         return true;
     }
 

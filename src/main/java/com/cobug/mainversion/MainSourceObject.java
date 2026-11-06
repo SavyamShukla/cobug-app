@@ -35,6 +35,9 @@ public class MainSourceObject {
         if ("LOCAL_STORAGE".equalsIgnoreCase(storageType) && content == null) {
             content = "";
         }
+        if (content != null && content.indexOf('\0') >= 0) {
+            content = content.replace("\0", "");
+        }
     }
     public UUID getId(){return id;}
     public String getSha256(){return sha256;} public void setSha256(String v){sha256=v;}

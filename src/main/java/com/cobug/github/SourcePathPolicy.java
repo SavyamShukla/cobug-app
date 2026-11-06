@@ -49,13 +49,15 @@ public final class SourcePathPolicy {
     }
 
     public static boolean looksText(String path, byte[] bytes) {
+        if (bytes != null) {
+            for (byte b : bytes) {
+                if (b == 0) return false;
+            }
+        }
         String name = normalize(path).toLowerCase(Locale.ROOT);
         int dot = name.lastIndexOf('.');
         if (dot >= 0 && TEXT_EXTENSIONS.contains(name.substring(dot + 1))) return true;
         if (name.endsWith("/dockerfile") || name.equals("dockerfile") || name.endsWith("/makefile") || name.equals("makefile")) return true;
-        if (bytes == null || bytes.length == 0) return true;
-        int sample = Math.min(bytes.length, 8192);
-        for (int i = 0; i < sample; i++) if (bytes[i] == 0) return false;
         return true;
     }
 
