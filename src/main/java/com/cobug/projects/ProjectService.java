@@ -73,6 +73,16 @@ public class ProjectService {
         project.setOwner(owner);
         project.setStatus(ProjectStatus.ACTIVE);
 
+        if (request.projectType() != null && !request.projectType().isBlank()) {
+            try {
+                project.setProjectType(ProjectType.valueOf(request.projectType().trim().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                project.setProjectType(ProjectType.PROFESSIONAL);
+            }
+        } else {
+            project.setProjectType(ProjectType.PROFESSIONAL);
+        }
+
         Project savedProject =
                 projectRepository.save(project);
 
@@ -198,7 +208,8 @@ public class ProjectService {
                 project.getCreatedAt(),
                 progress,
                 totalStations,
-                completedStations
+                completedStations,
+                project.getProjectType() != null ? project.getProjectType().name() : ProjectType.PROFESSIONAL.name()
         );
     }
 }

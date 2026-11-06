@@ -12,5 +12,6 @@ public record ProjectResponse(
         LocalDateTime createdAt,
         int progress,
         long roadmapStations,
-        long completedRoadmapStations
+        long completedRoadmapStations,
+        String projectType
 ) {}

@@ -98,8 +98,10 @@ public class MainVersionService {
 
     @Transactional
     public Map<String,Object> create(UUID projectId, String email, CreateVersionRequest request) {
-        User user = access.requireOwner(projectId, email);
         Project project = access.getProject(projectId);
+        User user = (project.getProjectType() == com.cobug.projects.ProjectType.PERSONAL)
+                ? access.requireMember(projectId, email)
+                : access.requireOwner(projectId, email);
         if (request == null || request.files() == null || request.files().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A Main version must contain source files.");
         }
@@ -130,8 +132,10 @@ public class MainVersionService {
             String[] paths,
             String message
     ) {
-        User user = access.requireOwner(projectId, email);
         Project project = access.getProject(projectId);
+        User user = (project.getProjectType() == com.cobug.projects.ProjectType.PERSONAL)
+                ? access.requireMember(projectId, email)
+                : access.requireOwner(projectId, email);
 
         if (files == null || files.length == 0 || paths == null || paths.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A starting point folder must contain source files.");
@@ -181,8 +185,10 @@ public class MainVersionService {
             MultipartFile zipFile,
             String message
     ) {
-        User user = access.requireOwner(projectId, email);
         Project project = access.getProject(projectId);
+        User user = (project.getProjectType() == com.cobug.projects.ProjectType.PERSONAL)
+                ? access.requireMember(projectId, email)
+                : access.requireOwner(projectId, email);
 
         if (zipFile == null || zipFile.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A starting point zip package must not be empty.");

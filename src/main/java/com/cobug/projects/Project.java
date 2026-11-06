@@ -31,6 +31,10 @@ public class Project {
     @Column(nullable = false)
     private ProjectStatus status = ProjectStatus.ACTIVE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "project_type")
+    private ProjectType projectType = ProjectType.PROFESSIONAL;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -43,6 +47,10 @@ public class Project {
 
         if (status == null) {
             status = ProjectStatus.ACTIVE;
+        }
+
+        if (projectType == null) {
+            projectType = ProjectType.PROFESSIONAL;
         }
     }
 
@@ -88,6 +96,14 @@ public class Project {
 
     public void setStatus(ProjectStatus status) {
         this.status = status;
+    }
+
+    public ProjectType getProjectType() {
+        return projectType != null ? projectType : ProjectType.PROFESSIONAL;
+    }
+
+    public void setProjectType(ProjectType projectType) {
+        this.projectType = projectType == null ? ProjectType.PROFESSIONAL : projectType;
     }
 
     public LocalDateTime getCreatedAt() {
