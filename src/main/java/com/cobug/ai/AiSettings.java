@@ -61,6 +61,15 @@ public class AiSettings {
     @Column(length = 160)
     private String customGroqModel = "llama-3.3-70b-versatile";
 
+    @Column(length = 500)
+    private String customOllamaCloudUrl = "https://ollama.com";
+
+    @Column(length = 160)
+    private String customOllamaCloudModel = "gpt-oss:20b";
+
+    @Column(length = 255)
+    private String customOllamaCloudKey = "";
+
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
@@ -77,6 +86,8 @@ public class AiSettings {
         if (customOllamaUrl == null || customOllamaUrl.isBlank()) customOllamaUrl = "http://localhost:11434";
         if (customOllamaModel == null || customOllamaModel.isBlank()) customOllamaModel = "qwen2.5-coder:3b";
         if (customGroqModel == null || customGroqModel.isBlank()) customGroqModel = "llama-3.3-70b-versatile";
+        if (customOllamaCloudUrl == null || customOllamaCloudUrl.isBlank()) customOllamaCloudUrl = "https://ollama.com";
+        if (customOllamaCloudModel == null || customOllamaCloudModel.isBlank()) customOllamaCloudModel = "gpt-oss:20b";
         updatedAt = LocalDateTime.now();
     }
 
@@ -116,5 +127,11 @@ public class AiSettings {
     public void setCustomGroqKey(String customGroqKey) { this.customGroqKey = customGroqKey; }
     public String getCustomGroqModel() { return customGroqModel; }
     public void setCustomGroqModel(String customGroqModel) { this.customGroqModel = customGroqModel; }
+    public String getCustomOllamaCloudUrl() { return customOllamaCloudUrl; }
+    public void setCustomOllamaCloudUrl(String customOllamaCloudUrl) { this.customOllamaCloudUrl = customOllamaCloudUrl; }
+    public String getCustomOllamaCloudModel() { return customOllamaCloudModel; }
+    public void setCustomOllamaCloudModel(String customOllamaCloudModel) { this.customOllamaCloudModel = customOllamaCloudModel; }
+    public String getCustomOllamaCloudKey() { return customOllamaCloudKey; }
+    public void setCustomOllamaCloudKey(String customOllamaCloudKey) { this.customOllamaCloudKey = customOllamaCloudKey; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

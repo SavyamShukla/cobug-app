@@ -33,13 +33,15 @@ public class OllamaCloudAiService implements AiProvider {
             ProjectAiContextService context,
             GlobalAiContextService globalContext,
             @Value("${cobug.ollama.cloud.url:https://ollama.com}") String baseUrl,
-            @Value("${cobug.ollama.model:qwen2.5-coder:3b}") String model,
+            @Value("${cobug.ollama.cloud.model:gpt-oss:20b}") String model,
             @Value("${cobug.ollama.cloud.api-key:}") String apiKey) {
         this.mapper = mapper;
         this.context = context;
         this.globalContext = globalContext;
         this.baseUrl = (baseUrl == null || baseUrl.isBlank() ? "https://ollama.com" : baseUrl).replaceAll("/+$", "");
-        this.configuredModel = model == null || model.isBlank() ? "qwen2.5-coder:3b" : model.trim();
+        String m = model == null || model.isBlank() ? "gpt-oss:20b" : model.trim();
+        if ("gpt-oss20b".equalsIgnoreCase(m)) m = "gpt-oss:20b";
+        this.configuredModel = m;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     }
@@ -79,7 +81,9 @@ public class OllamaCloudAiService implements AiProvider {
     private String callOllama(String prompt, String model) {
         if (apiKey.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Ollama Cloud API key is not configured.");
         try {
-            Map<String,Object> body = new LinkedHashMap<>(); body.put("model", model); body.put("stream", false);
+            String targetModel = model == null || model.isBlank() ? configuredModel : model.trim();
+            if ("gpt-oss20b".equalsIgnoreCase(targetModel)) targetModel = "gpt-oss:20b";
+            Map<String,Object> body = new LinkedHashMap<>(); body.put("model", targetModel); body.put("stream", false);
             body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
             HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/api/chat")).timeout(Duration.ofSeconds(180))
                     .header("Content-Type", "application/json")

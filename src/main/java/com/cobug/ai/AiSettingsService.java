@@ -69,6 +69,7 @@ public class AiSettingsService {
         if (s.getCustomGeminiKey() != null && !s.getCustomGeminiKey().isBlank()) return "gemini";
         if (s.getCustomGroqKey() != null && !s.getCustomGroqKey().isBlank()) return "groq";
         if (s.getCustomOpenAiKey() != null && !s.getCustomOpenAiKey().isBlank()) return "openai";
+        if (s.getCustomOllamaCloudKey() != null && !s.getCustomOllamaCloudKey().isBlank()) return "ollama_cloud";
         if (s.getCustomOllamaUrl() != null && !s.getCustomOllamaUrl().isBlank() && !"http://localhost:11434".equals(s.getCustomOllamaUrl())) return "ollama";
         return "gemini";
     }
@@ -119,6 +120,9 @@ public class AiSettingsService {
         out.put("customOllamaModel", s.getCustomOllamaModel() == null ? "qwen2.5-coder:3b" : s.getCustomOllamaModel());
         out.put("customGroqKey", s.getCustomGroqKey() == null ? "" : s.getCustomGroqKey());
         out.put("customGroqModel", s.getCustomGroqModel() == null ? "llama-3.3-70b-versatile" : s.getCustomGroqModel());
+        out.put("customOllamaCloudUrl", s.getCustomOllamaCloudUrl() == null ? "https://ollama.com" : s.getCustomOllamaCloudUrl());
+        out.put("customOllamaCloudModel", s.getCustomOllamaCloudModel() == null ? "gpt-oss:20b" : s.getCustomOllamaCloudModel());
+        out.put("customOllamaCloudKey", s.getCustomOllamaCloudKey() == null ? "" : s.getCustomOllamaCloudKey());
         out.put("includeProjectContext", s.isIncludeProjectContext());
         out.put("includeActivityContext", s.isIncludeActivityContext());
         out.put("automaticAssistance", s.isAutomaticAssistance());
@@ -158,6 +162,17 @@ public class AiSettingsService {
                              String customGeminiKey, String customOpenAiKey,
                              String customOllamaUrl, String customOllamaModel,
                              String customGroqKey, String customGroqModel) {
+        return update(email, provider, model, localUrl, includeProjectContext, includeActivityContext, automaticAssistance, plan, customGeminiKey, customOpenAiKey, customOllamaUrl, customOllamaModel, customGroqKey, customGroqModel, null, null, null);
+    }
+
+    public AiSettings update(String email, String provider, String model, String localUrl,
+                             Boolean includeProjectContext, Boolean includeActivityContext,
+                             Boolean automaticAssistance, String plan,
+                             String customGeminiKey, String customOpenAiKey,
+                             String customOllamaUrl, String customOllamaModel,
+                             String customGroqKey, String customGroqModel,
+                             String customOllamaCloudUrl, String customOllamaCloudModel,
+                             String customOllamaCloudKey) {
         AiSettings s = getOrCreate(email);
         User user = user(email);
         String paidPlan = resolveActivePaidPlan(user);
@@ -201,6 +216,13 @@ public class AiSettingsService {
         if (customOllamaModel != null && !customOllamaModel.isBlank()) s.setCustomOllamaModel(customOllamaModel.trim());
         if (customGroqKey != null) s.setCustomGroqKey(customGroqKey.trim());
         if (customGroqModel != null && !customGroqModel.isBlank()) s.setCustomGroqModel(customGroqModel.trim());
+        if (customOllamaCloudUrl != null && !customOllamaCloudUrl.isBlank()) s.setCustomOllamaCloudUrl(customOllamaCloudUrl.trim());
+        if (customOllamaCloudModel != null && !customOllamaCloudModel.isBlank()) {
+            String cm = customOllamaCloudModel.trim();
+            if ("gpt-oss20b".equalsIgnoreCase(cm)) cm = "gpt-oss:20b";
+            s.setCustomOllamaCloudModel(cm);
+        }
+        if (customOllamaCloudKey != null) s.setCustomOllamaCloudKey(customOllamaCloudKey.trim());
         return repository.save(s);
     }
 
@@ -260,7 +282,7 @@ public class AiSettingsService {
         if (provider == null || provider.isBlank()) return "ollama";
         String p = provider.trim().toLowerCase();
         if (p.equals("local") || p.equals("ollama-local")) return "ollama";
-        if (p.equals("cloud-ollama")) return "ollama-cloud";
+        if (p.equals("cloud-ollama") || p.equals("cloud_ollama") || p.equals("ollama-cloud") || p.equals("ollama_cloud")) return "ollama_cloud";
         if (p.equals("chatgpt")) return "openai";
         if (p.equals("groq") || p.equals("groq-cloud")) return "groq";
         if (p.equals("intent") || p.equals("intent-detector") || p.equals("local-intent")) return "local-engine";

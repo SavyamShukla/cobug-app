@@ -57,7 +57,7 @@ public class AiProviderRouter implements AiProvider {
             case "openai", "chatgpt" -> openAi;
             case "groq" -> groq;
             case "ollama" -> ollama;
-            case "ollama-cloud" -> ollamaCloud;
+            case "ollama-cloud", "ollama_cloud", "cloud-ollama", "cloud_ollama" -> ollamaCloud;
             default -> gemini;
         };
     }
@@ -108,7 +108,7 @@ public class AiProviderRouter implements AiProvider {
             case "gemini" -> gemini.model();
             case "openai", "chatgpt" -> openAi.model();
             case "groq" -> groq.model();
-            case "ollama-cloud" -> ollamaCloud.model();
+            case "ollama-cloud", "ollama_cloud", "cloud-ollama", "cloud_ollama" -> ollamaCloud.model();
             case "local-engine", "local_engine" -> "local-engine";
             default -> ollama.model();
         };
@@ -118,7 +118,7 @@ public class AiProviderRouter implements AiProvider {
         if (provider == null || provider.isBlank()) return defaultProviderFallback();
         String p = provider.trim().toLowerCase();
         if (p.equals("local") || p.equals("ollama-local")) return "ollama";
-        if (p.equals("cloud-ollama")) return "ollama-cloud";
+        if (p.equals("cloud-ollama") || p.equals("cloud_ollama") || p.equals("ollama-cloud") || p.equals("ollama_cloud")) return "ollama_cloud";
         if (p.equals("chatgpt")) return "openai";
         if (p.equals("groq") || p.equals("groq-cloud")) return "groq";
         if (p.equals("local-engine") || p.equals("local_engine") || p.equals("intent")) return "local-engine";

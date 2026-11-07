@@ -26,7 +26,10 @@ public class AiSettingsController {
             String customOllamaUrl,
             String customOllamaModel,
             String customGroqKey,
-            String customGroqModel) {
+            String customGroqModel,
+            String customOllamaCloudUrl,
+            String customOllamaCloudModel,
+            String customOllamaCloudKey) {
     }
 
     @GetMapping
@@ -37,12 +40,13 @@ public class AiSettingsController {
     @PutMapping
     public Map<String, Object> update(@RequestBody UpdateRequest request, Authentication authentication) {
         UpdateRequest r = request == null
-                ? new UpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null)
+                ? new UpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
                 : request;
         service.update(authentication.getName(), r.provider(), r.model(), r.localOllamaUrl(),
                 r.includeProjectContext(), r.includeActivityContext(), r.automaticAssistance(),
                 r.plan(), r.customGeminiKey(), r.customOpenAiKey(), r.customOllamaUrl(), r.customOllamaModel(),
-                r.customGroqKey(), r.customGroqModel());
+                r.customGroqKey(), r.customGroqModel(),
+                r.customOllamaCloudUrl(), r.customOllamaCloudModel(), r.customOllamaCloudKey());
         return service.dto(authentication.getName());
     }
 
